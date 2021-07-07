@@ -1,0 +1,36 @@
+image: docker:stable
+
+stages:
+  - build
+  - deploy
+
+services:
+  - docker:18.09.4-dind
+
+
+
+Build Imagem no gitlab:
+  image: google/cloud-sdk:latest 
+  stage: build
+  before_script:
+    - gcloud auth activate-service-account --key-file=$GCP_KEY
+    - gcloud auth configure-docker
+    - gcloud container images list --repository=gcr.io/perceptive-net-319104 
+
+  script:
+    - echo $CI_PIPELINE_ID
+    - docker build -t nodeapi:$CI_PIPELINE_ID .
+    - docker tag nodeapi:$CI_PIPELINE_ID gcr.io/perceptive-net-319104/nodeapi:$CI_PIPELINE_ID
+    - docker push gcr.io/perceptive-net-319104/nodeapi:$CI_PIPELINE_ID
+    - gcloud container images list --repository=gcr.io/perceptive-net-319104 
+   
+
+Deploy GKE:
+  image: google/cloud-sdk:latest
+  stage: deploy
+  script:
+    - gcloud auth activate-service-account --key-file=$GCP_KEY
+    - gcloud container clusters get-credentials terraform --zone us-west1-b --project perceptive-net-319104 
+    - kubectl set image deployment/nodeapp nodeapi=gcr.io/perceptive-net-319104/nodeapi:$CI_PIPELINE_ID --namespace=default
+    - echo 'Final deploy'
+  when: manual

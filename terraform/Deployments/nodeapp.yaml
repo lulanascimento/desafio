@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp
+  namespace: default
+  labels:
+    app: nodeapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeapi
+  template:
+    metadata:
+      labels:
+        app: nodeapi
+    spec:
+      containers:
+      - name: nodeapi
+        securityContext:
+          privileged: true
+        image: gcr.io/laboratorio-313602/nodeapp:8
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 3000
+              scheme: HTTP
+            periodSeconds: 500
+            successThreshold: 1
+            timeoutSeconds: 1 
+        
+        
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeapp-dev
+  namespace: default
+spec:
+  type: NodePort
+  
+  ports:
+    - port: 3000
+      name: http
+      protocol: TCP
+      targetPort: 3000
+      nodePort: 31785
+    
+
+    
+  selector:
+    app: nodeapi
+
+        
+
+
